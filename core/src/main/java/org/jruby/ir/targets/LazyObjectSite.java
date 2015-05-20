@@ -1,16 +1,12 @@
 package org.jruby.ir.targets;
 
 import com.headius.invokebinder.Binder;
-import com.headius.invokebinder.SmartBinder;
-import org.jruby.compiler.Constantizable;
-import org.jruby.runtime.ThreadContext;
+import org.jruby.Constantizable;
 import org.jruby.runtime.builtin.IRubyObject;
 
-import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.MutableCallSite;
 
 /**
 * Created by headius on 10/23/14.

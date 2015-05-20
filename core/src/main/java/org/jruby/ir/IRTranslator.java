@@ -39,8 +39,8 @@ public abstract class IRTranslator<R, S> {
             }
         }
 
-        return execute(runtime, scope, specificObject);
+        return execute(scope, specificObject);
     }
 
-    protected abstract R execute(Ruby runtime, IRScriptBody producedIrScope, S specificObject);
+    protected abstract R execute(IRScriptBody producedIrScope, S specificObject);
 }

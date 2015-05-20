@@ -1,8 +1,6 @@
 package org.jruby.ir.targets;
 
 import com.headius.invokebinder.Binder;
-import org.jruby.compiler.Constantizable;
-import org.jruby.runtime.builtin.IRubyObject;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;

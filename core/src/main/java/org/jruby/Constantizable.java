@@ -1,4 +1,4 @@
-package org.jruby.compiler;
+package org.jruby;
 
 /**
  * Represents an object that can produce a JIT-optimizable "constant" version of itself. Currently this is only used

@@ -1,4 +1,4 @@
-package org.jruby.compiler;
+package org.jruby.management;
 
 public interface JITCompilerMBean {
     public long getSuccessCount();

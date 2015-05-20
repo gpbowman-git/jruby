@@ -26,7 +26,7 @@
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the EPL, the GPL or the LGPL.
  ***** END LICENSE BLOCK *****/
-package org.jruby.compiler;
+package org.jruby.management;
 
 
 import org.jruby.MetaClass;
@@ -35,6 +35,7 @@ import org.jruby.RubyEncoding;
 import org.jruby.RubyInstanceConfig;
 import org.jruby.RubyModule;
 import org.jruby.ast.util.SexpMaker;
+import org.jruby.compiler.Compilable;
 import org.jruby.internal.runtime.methods.CompiledIRMethod;
 import org.jruby.internal.runtime.methods.MixedModeIRMethod;
 import org.jruby.ir.IRMethod;

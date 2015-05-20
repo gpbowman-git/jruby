@@ -34,7 +34,6 @@ package org.jruby;
 
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.compiler.Constantizable;
 import org.jruby.runtime.ClassIndex;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -91,7 +90,7 @@ public class RubyBoolean extends RubyObject implements Constantizable {
     }
 
     /**
-     * @see org.jruby.compiler.Constantizable
+     * @see Constantizable
      */
     @Override
     public Object constant() {

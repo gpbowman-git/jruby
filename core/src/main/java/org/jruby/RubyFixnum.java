@@ -39,9 +39,7 @@ package org.jruby;
 import org.jcodings.specific.USASCIIEncoding;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.compiler.Constantizable;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.BlockBody;
 import org.jruby.runtime.ClassIndex;
 import org.jruby.runtime.Helpers;
 import org.jruby.runtime.ObjectAllocator;
@@ -133,7 +131,7 @@ public class RubyFixnum extends RubyInteger implements Constantizable {
     }
 
     /**
-     * @see org.jruby.compiler.Constantizable
+     * @see Constantizable
      */
     @Override
     public Object constant() {

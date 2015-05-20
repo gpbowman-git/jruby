@@ -1,7 +1,5 @@
 package org.jruby.management;
 
-import org.jruby.compiler.JITCompilerMBean;
-
 public interface BeanManager {
 
     void register(JITCompilerMBean jitCompiler);

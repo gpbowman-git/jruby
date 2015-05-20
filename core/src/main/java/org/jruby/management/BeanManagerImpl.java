@@ -14,7 +14,6 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import org.jruby.Ruby;
-import org.jruby.compiler.JITCompilerMBean;
 import org.jruby.util.log.Logger;
 import org.jruby.util.log.LoggerFactory;
 

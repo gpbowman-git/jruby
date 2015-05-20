@@ -2,7 +2,6 @@ package org.jruby.management;
 
 import java.lang.reflect.Constructor;
 import org.jruby.Ruby;
-import org.jruby.compiler.JITCompilerMBean;
 
 public class BeanManagerFactory {
     private static final Class BeanManagerImpl;

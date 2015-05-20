@@ -48,15 +48,12 @@ import org.jruby.ast.GlobalAsgnNode;
 import org.jruby.ast.GlobalVarNode;
 import org.jruby.ast.VCallNode;
 import org.jruby.ast.WhileNode;
-import org.jruby.compiler.Constantizable;
-import org.jruby.compiler.NotCompilableException;
 import org.jruby.ext.thread.ThreadLibrary;
 import org.jruby.ir.IRScriptBody;
 import org.jruby.javasupport.JavaSupport;
 import org.jruby.javasupport.JavaSupportImpl;
 import org.jruby.lexer.yacc.ISourcePosition;
 import org.jruby.parser.StaticScope;
-import org.jruby.util.ClassDefiningClassLoader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import jnr.constants.Constant;
@@ -75,7 +72,6 @@ import org.jruby.ast.executable.Script;
 import org.jruby.ast.executable.ScriptAndCode;
 import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.common.RubyWarnings;
-import org.jruby.compiler.JITCompiler;
 import org.jruby.embed.Extension;
 import org.jruby.exceptions.JumpException;
 import org.jruby.exceptions.MainExitException;
@@ -94,7 +90,6 @@ import org.jruby.internal.runtime.ValueAccessor;
 import org.jruby.internal.runtime.methods.CallConfiguration;
 import org.jruby.internal.runtime.methods.DynamicMethod;
 import org.jruby.internal.runtime.methods.JavaMethod;
-import org.jruby.ir.Compiler;
 import org.jruby.ir.IRManager;
 import org.jruby.ir.interpreter.Interpreter;
 import org.jruby.ir.persistence.IRReader;
@@ -104,6 +99,7 @@ import org.jruby.javasupport.proxy.JavaProxyClassFactory;
 import org.jruby.management.BeanManager;
 import org.jruby.management.BeanManagerFactory;
 import org.jruby.management.Config;
+import org.jruby.management.JITCompiler;
 import org.jruby.management.ParserStats;
 import org.jruby.parser.Parser;
 import org.jruby.parser.ParserConfiguration;
@@ -280,7 +276,34 @@ public final class Ruby implements Constantizable {
             objectSpacer = DISABLED_OBJECTSPACE;
         }
 
+        this.interpreter = new Interpreter(this);
+
+        if (getInstanceConfig().getCompileMode().shouldJIT()) {
+            final Class<?> clazz;
+
+            try {
+                clazz = getJRubyClassLoader().loadClass("org.jruby.ir.Compiler");
+            } catch (Exception e) {
+                throw new RuntimeException("Compiler not available", e);
+            }
+
+            try {
+                Constructor<?> con = clazz.getConstructor(Ruby.class);
+                compiler = (org.jruby.Compiler) con.newInstance(this);
+            } catch (Exception e) {
+                throw new RuntimeException("Error while calling the constructor of IR Compiler", e);
+            }
+        } else {
+            compiler = null;
+        }
+
         reinitialize(false);
+    }
+
+    private final org.jruby.Compiler compiler;
+
+    public Compiler getCompiler() {
+        return compiler;
     }
 
     public void registerMBeans() {
@@ -471,7 +494,7 @@ public final class Ruby implements Constantizable {
         context.preEvalScriptlet(scope);
 
         try {
-            return Interpreter.getInstance().execute(this, rootNode, context.getFrameSelf());
+            return interpreter.execute(this, rootNode, context.getFrameSelf());
         } finally {
             context.postEvalScriptlet();
         }
@@ -651,7 +674,7 @@ public final class Ruby implements Constantizable {
         boolean compile = getInstanceConfig().getCompileMode().shouldPrecompileCLI();
         if (compile) {
             try {
-                script = tryCompile(scriptNode);
+                script = compiler.tryCompile(scriptNode);
                 if (Options.JIT_LOGGING.load()) {
                     LOG.info("Successfully compiled: " + scriptNode.getPosition().getFile());
                 }
@@ -764,7 +787,7 @@ public final class Ruby implements Constantizable {
         // IR JIT does not handle all scripts yet, so let those that fail run in interpreter instead
         // FIXME: restore error once JIT should handle everything
         try {
-            scriptAndCode = tryCompile(scriptNode, new ClassDefiningJRubyClassLoader(getJRubyClassLoader()));
+            scriptAndCode = compiler.tryCompile(scriptNode, new ClassDefiningJRubyClassLoader(getJRubyClassLoader()));
             if (scriptAndCode != null && Options.JIT_LOGGING.load()) {
                 LOG.info("done compiling target script: " + scriptNode.getPosition().getFile());
             }
@@ -779,18 +802,6 @@ public final class Ruby implements Constantizable {
         return scriptAndCode;
     }
 
-    /**
-     * Try to compile the code associated with the given Node, returning an
-     * instance of the successfully-compiled Script or null if the script could
-     * not be compiled.
-     *
-     * @param node The node to attempt to compiled
-     * @return an instance of the successfully-compiled Script, or null.
-     */
-    public Script tryCompile(Node node) {
-        return tryCompile(node, new ClassDefiningJRubyClassLoader(getJRubyClassLoader())).script();
-    }
-
     private void failForcedCompile(Node scriptNode) throws RaiseException {
         if (config.getCompileMode().shouldPrecompileAll()) {
             throw newRuntimeError("could not compile and compile mode is 'force': " + scriptNode.getPosition().getFile());
@@ -801,20 +812,6 @@ public final class Ruby implements Constantizable {
         if (config.isJitLoggingVerbose() || config.isDebug()) {
             LOG.error("warning: could not compile: {}; full trace follows", node.getPosition().getFile());
             LOG.error(t.getMessage(), t);
-        }
-    }
-
-    private ScriptAndCode tryCompile(Node node, ClassDefiningClassLoader classLoader) {
-        try {
-            return Compiler.getInstance().execute(this, node, classLoader);
-        } catch (NotCompilableException e) {
-            if (Options.JIT_LOGGING.load()) {
-                LOG.error("failed to compile target script " + node.getPosition().getFile() + ": " + e.getLocalizedMessage());
-                if (Options.JIT_LOGGING_VERBOSE.load()) {
-                    LOG.error(e);
-                }
-            }
-            return null;
         }
     }
 
@@ -856,7 +853,7 @@ public final class Ruby implements Constantizable {
         }
 
         try {
-            return Interpreter.getInstance().execute(this, parseResult, self);
+            return interpreter.execute(this, parseResult, self);
         } catch (JumpException.ReturnJump rj) {
             return (IRubyObject) rj.getValue();
         }
@@ -874,7 +871,7 @@ public final class Ruby implements Constantizable {
             try {
 
                 // FIXME: retrieve from IRManager unless lifus does it later
-                return Interpreter.getInstance().execute(this, rootNode, self);
+                return interpreter.execute(this, rootNode, self);
             } catch (JumpException.ReturnJump rj) {
                 return (IRubyObject) rj.getValue();
             }
@@ -2981,7 +2978,7 @@ public final class Ruby implements Constantizable {
             // script was not found in cache above, so proceed to compile
             Node scriptNode = parseFile(readStream, filename, null);
             if (script == null) {
-                scriptAndCode = tryCompile(scriptNode, new ClassDefiningJRubyClassLoader(jrubyClassLoader));
+                scriptAndCode = compiler.tryCompile(scriptNode, new ClassDefiningJRubyClassLoader(jrubyClassLoader));
                 if (scriptAndCode != null) script = scriptAndCode.script();
             }
 
@@ -3057,6 +3054,8 @@ public final class Ruby implements Constantizable {
     public JavaProxyClassFactory getJavaProxyClassFactory() {
         return javaProxyClassFactory;
     }
+
+    private final Interpreter interpreter;
 
     public class CallTraceFuncHook extends EventHook {
         private RubyProc traceFunc;
@@ -4775,7 +4774,7 @@ public final class Ruby implements Constantizable {
     }
 
     /**
-     * @see org.jruby.compiler.Constantizable
+     * @see Constantizable
      */
     @Override
     public Object constant() {

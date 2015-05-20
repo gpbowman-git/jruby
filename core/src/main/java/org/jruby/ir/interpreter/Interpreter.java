@@ -35,18 +35,12 @@ public class Interpreter extends IRTranslator<IRubyObject, IRubyObject> {
     private static final IRubyObject[] EMPTY_ARGS = new IRubyObject[]{};
     public static final String ROOT = "(root)";
     static int interpInstrsCount = 0;
+    private final Ruby runtime;
 
     // we do not need instances of Interpreter
     // FIXME: Should we make it real singleton and get rid of static methods?
-    private Interpreter() { }
-
-    private static class InterpreterHolder {
-        // FIXME: Remove static reference unless lifus does later
-        public static final Interpreter instance = new Interpreter();
-    }
-
-    public static Interpreter getInstance() {
-        return InterpreterHolder.instance;
+    public Interpreter(Ruby runtime) {
+        this.runtime = runtime;
     }
 
     public static void dumpStats() {
@@ -71,7 +65,7 @@ public class Interpreter extends IRTranslator<IRubyObject, IRubyObject> {
     }
 
     @Override
-    protected IRubyObject execute(Ruby runtime, IRScriptBody irScope, IRubyObject self) {
+    protected IRubyObject execute(IRScriptBody irScope, IRubyObject self) {
         BeginEndInterpreterContext ic = (BeginEndInterpreterContext) irScope.getInterpreterContext();
         ThreadContext context = runtime.getCurrentContext();
         String name = ROOT;

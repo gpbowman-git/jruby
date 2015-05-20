@@ -6,6 +6,7 @@ package org.jruby.ir;
 
 import org.jruby.Ruby;
 import org.jruby.RubyModule;
+import org.jruby.ast.Node;
 import org.jruby.ast.executable.AbstractScript;
 import org.jruby.ast.executable.Script;
 import org.jruby.ast.executable.ScriptAndCode;
@@ -22,27 +23,51 @@ import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.Visibility;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ClassDefiningClassLoader;
+import org.jruby.util.ClassDefiningJRubyClassLoader;
+import org.jruby.util.cli.Options;
+import org.jruby.util.log.Logger;
+import org.jruby.util.log.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 
-public class Compiler extends IRTranslator<ScriptAndCode, ClassDefiningClassLoader> {
+public class Compiler extends IRTranslator<ScriptAndCode, ClassDefiningClassLoader> implements org.jruby.Compiler {
+    private static final Logger LOG = LoggerFactory.getLogger("Compiler");
+    private final Ruby ruby;
 
-    // Compiler is singleton
-    private Compiler() {}
-
-    private static class CompilerHolder {
-        // FIXME: Remove as singleton unless lifus does later
-        public static final Compiler instance = new Compiler();
+    public Compiler(Ruby ruby) {
+        this.ruby = ruby;
     }
 
-    public static Compiler getInstance() {
-        return CompilerHolder.instance;
+    /**
+     * Try to compile the code associated with the given Node, returning an
+     * instance of the successfully-compiled Script or null if the script could
+     * not be compiled.
+     *
+     * @param node The node to attempt to compiled
+     * @return an instance of the successfully-compiled Script, or null.
+     */
+    public Script tryCompile(Node node) {
+        return tryCompile(node, new ClassDefiningJRubyClassLoader(ruby.getJRubyClassLoader())).script();
+    }
+
+    public ScriptAndCode tryCompile(Node node, ClassDefiningClassLoader classLoader) {
+        try {
+            return execute(ruby, node, classLoader);
+        } catch (NotCompilableException e) {
+            if (Options.JIT_LOGGING.load()) {
+                LOG.error("failed to compile target script " + node.getPosition().getFile() + ": " + e.getLocalizedMessage());
+                if (Options.JIT_LOGGING_VERBOSE.load()) {
+                    LOG.error(e);
+                }
+            }
+            return null;
+        }
     }
 
     @Override
-    protected ScriptAndCode execute(final Ruby runtime, final IRScriptBody scope, ClassDefiningClassLoader classLoader) {
+    protected ScriptAndCode execute(final IRScriptBody scope, ClassDefiningClassLoader classLoader) {
         JVMVisitor visitor;
         byte[] bytecode;
         Class compiled;

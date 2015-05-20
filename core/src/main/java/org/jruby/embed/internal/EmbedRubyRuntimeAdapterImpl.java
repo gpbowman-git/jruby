@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.Writer;
 import java.net.URL;
 
 import org.jruby.Ruby;
@@ -192,7 +191,7 @@ public class EmbedRubyRuntimeAdapterImpl implements EmbedRubyRuntimeAdapter {
             CompileMode compileMode = runtime.getInstanceConfig().getCompileMode();
             if (compileMode == CompileMode.FORCE) {
                 // CON FIXME: We may need to force heap variables here so the compiled script uses our provided scope
-                Script script = runtime.tryCompile(node);
+                Script script = runtime.getCompiler().tryCompile(node);
                 if (script != null) {
                     return new EmbedEvalUnitImpl(container, node, scope, script);
                 } else {

@@ -41,9 +41,7 @@ import org.jcodings.specific.USASCIIEncoding;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.ast.util.ArgsUtil;
-import org.jruby.compiler.Constantizable;
 import org.jruby.parser.StaticScope;
-import org.jruby.runtime.Arity;
 import org.jruby.runtime.Binding;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.Block.Type;
@@ -207,7 +205,7 @@ public class RubySymbol extends RubyObject implements MarshalEncoding, Constanti
     }
 
     /**
-     * @see org.jruby.compiler.Constantizable
+     * @see Constantizable
      */
     @Override
     public Object constant() {
